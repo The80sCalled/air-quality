@@ -1,0 +1,19 @@
+A fact sheet with definitions and metadata for this dataset can be found at http://www.stateair.net/web/historical/1/1.html.,,,,,,,,,,
+The U.S. Department of State Data Use Statement at http://www.stateair.net/web/historical/1/1.html applies to these and all data available from the Mission China air quality monitoring program.,,,,,,,,,,
+,,,,,,,,,,
+Site,Parameter,Date (LST),Year,Month,Day,Hour,Value,Unit,Duration,QC Name
+Beijing,PM2.5,2014-03-09 00:00,2014,3,9,0,131,µg/m³,1 Hr,Valid
+Beijing,PM2.5,2014-03-09 01:00,2014,3,9,1,154,µg/m³,1 Hr,Valid
+Beijing,PM2.5,2014-03-09 03:00,2014,3,9,3,112,µg/m³,1 Hr,Valid
+Beijing,PM2.5,2014-03-09 03:00,2014,3,9,3,55,µg/m³,1 Hr,Valid
+Beijing,PM2.5,2014-03-09 04:00,2014,3,9,4,172,µg/m³,1 Hr,Valid
+Beijing,PM2.5,2014-03-09 05:00,2014,3,9,5,143,µg/m³,1 Hr,Valid
+Beijing,PM2.5,2014-03-09 06:00,2014,3,9,6,122,µg/m³,1 Hr,Valid
+Beijing,PM2.5,2014-03-09 08:00,2014,3,9,8,100,µg/m³,1 Hr,Valid
+Beijing,PM2.5,2014-03-09 09:00,2014,3,9,9,119,µg/m³,1 Hr,Valid
+Beijing2,PM2.5,2014-03-09 10:00,2014,3,9,10,130,µg/m³,1 Hr,Valid
+Beijing,PM2.6,2014-03-09 11:00,2014,3,9,11,145,µg/m³,1 Hr,Valid
+Beijing,PM2.5,2014-03-09 12:00,2014,3,9,12,149,someunit,1 Hr,Valid
+Beijing,PM2.5,2014-03-09 13:00,2014,3,9,13,163,µg/m³,1 Hr3,Valid
+Beijing,PM2.5,2014-03-09 14:00,2014,3,9,14,147,µg/m³,1 Hr,Missing
+Beijing,PM2.5,2014-03-09 15:00,2014,3,9,15,133,µg/m³,1 Hr,Valid

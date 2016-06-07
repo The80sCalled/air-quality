@@ -2,6 +2,8 @@ import base
 import sys
 import os
 import logging
+import stateair
+import csv
 
 def _prepare_config(config):
     """
@@ -18,5 +20,9 @@ if __name__ == "__main__":
     _prepare_config(config)
 
     logging.info("Reading AQI files from %s" % config['aqi_files_path'])
+
+    aqiData = stateair.DataSet(config['aqi_files_path'])
+
+
 
 
