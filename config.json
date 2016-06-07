@@ -1,0 +1,7 @@
+{
+    "__comment": "Path to log file.",
+    "log_file": "~\\Documents\\Scratch\\Logs\\air-quality.log",
+
+    "__comment": "Path where AQI .csv files from the US State Department are located.",
+    "aqi_files_path": "~\\Documents\\AQI\\US Embassy Historical Data"
+}
