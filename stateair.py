@@ -3,6 +3,9 @@ import os
 import io
 import datetime
 import unittest
+import collections
+import bisect
+
 
 class AqiDataSet:
 
@@ -87,12 +90,10 @@ class AqiDataSet:
         :param rows: Hourly data.  May contain gaps; assumed to be sorted.
         :return: Nothing.
         """
-        import bisect
-
         row_dates = [row['Date'] for row in rows]
 
         # Find up to one duplicate at 3am in the month of March; any others will be flagged.
-        for year in range(row_dates[0].date().year, row_dates[-1:][0].date().year + 1):
+        for year in range(row_dates[0].date().year, row_dates[-1].date().year + 1):
             march_begin = datetime.datetime(year, 3, 1)
             march_end = datetime.datetime(year, 4, 1)
 
@@ -167,6 +168,7 @@ class AqiDataSet:
         logging.info("Preparing to parse %d AQI files" % len(csv_files))
 
         self.rows = [AqiDataPoint(r['Date'], r['Value']) for r in AqiDataSet._read_rows_from_csv_files(csv_files)]
+        self.row_dates = [r.date for r in self.rows]
 
         logging.info("Loaded stateair.net AQI data with {0} rows".format(len(self.rows)))
         logging.info("    Start: {0}".format(self.rows[0].date))
@@ -175,11 +177,70 @@ class AqiDataSet:
         self.missing_count = len([r for r in self.rows if r.value is None])
         logging.info("    Missing: {0} ({1}%)".format(self.missing_count, 100 * self.missing_count / len(self.rows)))
 
+    def data_in_range(self, date_begin=None, date_end=None):
+        """
+        Given a date range (exclusive), returns all elements with dates greater than or equal to date_begin
+        and less than date_end.
+        :param date_begin:
+        :param date_end:
+        :return:
+        """
+        if date_begin is None:
+            date_begin = self.rows[0].date
+
+        if date_end is None:
+            date_end = self.rows[-1].date + datetime.timedelta(hours=1)
+
+        if type(date_begin) is datetime.date:
+            date_begin = datetime.datetime.combine(date_begin, datetime.time())
+
+        if type(date_end) is datetime.date:
+            date_end = datetime.datetime.combine(date_end, datetime.time())
+
+        return AqiDataRange(self, date_begin, date_end)
+
+
+# Strongly coupled to AqiDataSet class
+class AqiDataRange(collections.Sequence):
+
+    def __init__(self, aqi_data, date_begin: datetime.datetime, date_end: datetime.datetime):
+        self.aqi_data = aqi_data
+        self.date_begin = date_begin
+        self.date_end = date_end
+
+        self.offset_into_data = int((self.date_begin - self.aqi_data.row_dates[0]).total_seconds()) // 3600
+        self._count = max(0, int((self.date_end - self.date_begin).total_seconds()) // 3600)
+
+    def __len__(self):
+        return self._count
+
+    # Optimized for the case where either the same key is being requested, or
+    # the next key is being requested
+    def __getitem__(self, key):
+        if key < 0:
+            key += self._count
+
+        if key >= self._count:
+            raise IndexError()
+
+        index = key + self.offset_into_data
+        if index < 0 or index >= len(self.aqi_data.row_dates):
+            my_date = self.date_begin + datetime.timedelta(hours=key)
+            return AqiDataPoint(my_date, None)
+
+        return self.aqi_data.rows[index]
+
+    def valid_data_point_count(self):
+        return len([dp for dp in self if dp.isvalid()])
+
 
 class AqiDataPoint:
     def __init__(self, date, value):
         self.date = date
         self.value = value
+
+    def isvalid(self):
+        return self.value is not None
 
 
 class UnitTests(unittest.TestCase):
@@ -192,7 +253,7 @@ class UnitTests(unittest.TestCase):
         self.assertEqual(len(data.rows), 16, "row count")
         self.assertEqual(data.missing_count, 6, "missing_count")
         self.assertEqual(data.rows[0].date, datetime.datetime(2014, 3, 9, 0), "data[0].date")
-        self.assertEqual(data.rows[-1:][0].date, datetime.datetime(2014, 3, 9, 15), "data[0].date")
+        self.assertEqual(data.rows[-1].date, datetime.datetime(2014, 3, 9, 15), "data[0].date")
 
         self.assertEqual(data.rows[2].date.time().hour, 2, "dst corrected entry's time, in hours")
         self.assertEqual(data.rows[2].value, 112, "dst corrected entry's PM2.5")
@@ -203,3 +264,32 @@ class UnitTests(unittest.TestCase):
         self.assertEqual(data.rows[14].value, None, "should be missing since QC Name = Missing")
 
         pass
+
+    def test_data_in_range(self):
+        data = AqiDataSet("unittest\\test-data")
+
+        my_range = data.data_in_range(datetime.date(2014, 2, 1), datetime.date(2014, 2, 4))
+        self.assertEqual(len(my_range), 72, "empty set")
+        self.assertEqual(my_range.valid_data_point_count(), 0, "empty set")
+
+        my_range = data.data_in_range(datetime.date(2014, 4, 1), datetime.date(2014, 2, 4))
+        self.assertEqual(len(my_range), 0, "empty set")
+        self.assertEqual(my_range.valid_data_point_count(), 0, "empty set")
+
+        my_range = data.data_in_range(datetime.date(2014, 4, 1), datetime.date(2014, 4, 4))
+        self.assertEqual(len(my_range), 72, "empty set")
+        self.assertEqual(my_range.valid_data_point_count(), 0, "empty set")
+        self.assertTrue(not my_range[0].isvalid(), "none should be valid")
+        self.assertTrue(not my_range[71].isvalid(), "none should be valid")
+        self.assertEqual(my_range[71].date, datetime.datetime(2014, 4, 3, 23), "last item's date")
+
+        my_range = data.data_in_range(datetime.datetime(2014, 3, 8, 23), datetime.datetime(2014, 3, 9, 8))
+        self.assertEqual(len(my_range), 9, "partially overlapping set")
+        self.assertEqual(my_range.valid_data_point_count(), 7, "missing some valid data points")
+        self.assertEqual(my_range[1].value, 131, "first valid item's value")
+
+        # Check behavior where start/end dates are implied
+        my_range = data.data_in_range()
+        self.assertEqual(len(my_range), 16)
+        self.assertEqual(my_range[0].date, datetime.datetime(2014, 3, 9, 0), 15)
+        self.assertEqual(my_range[15].date, datetime.datetime(2014, 3, 9, 15), 15)

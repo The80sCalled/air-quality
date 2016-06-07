@@ -3,7 +3,7 @@ import sys
 import os
 import logging
 import stateair
-import csv
+import reports
 
 def _prepare_config(config):
     """
@@ -13,6 +13,8 @@ def _prepare_config(config):
     def expand_config_path(key): config[key] = os.path.expanduser(config[key])
 
     expand_config_path('aqi_files_path')
+    expand_config_path('reports_path')
+
 
 if __name__ == "__main__":
 
@@ -21,8 +23,8 @@ if __name__ == "__main__":
 
     logging.info("Reading AQI files from %s" % config['aqi_files_path'])
 
-    aqiData = stateair.DataSet(config['aqi_files_path'])
+    aqi_data = stateair.AqiDataSet(config['aqi_files_path'])
 
-
-
+    report = reports.DataAvailabilityReport.process(aqi_data)
+    report.write_to_file(config['reports_path'])
 

@@ -3,5 +3,8 @@
     "log_file": "~\\Documents\\Scratch\\Logs\\air-quality.log",
 
     "__comment": "Path where AQI .csv files from the US State Department are located.",
-    "aqi_files_path": "~\\Documents\\AQI\\US Embassy Historical Data"
+    "aqi_files_path": "~\\Documents\\AQI\\US Embassy Historical Data",
+
+    "__comment": "Path where reports from historical AQI data analysis are located.",
+    "reports_path": "~\\Documents\\Scratch\\AQI History Reports"
 }
