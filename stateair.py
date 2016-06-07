@@ -4,7 +4,7 @@ import io
 import datetime
 import unittest
 
-class DataSet:
+class AqiDataSet:
 
     # This is useful when correlating data with real world system times, which we never do.  Can add it later.
     #TIME_ZONE = datetime.timezone(datetime.timedelta(hours = 8))
@@ -52,7 +52,7 @@ class DataSet:
 
             file_without_header = itertools.islice(file, skip_lines, None)
 
-            return list([r for r in [DataSet._standardize_row_format(row) for row in csv.DictReader(file_without_header)]
+            return list([r for r in [AqiDataSet._standardize_row_format(row) for row in csv.DictReader(file_without_header)]
                         if r is not None])
 
     @staticmethod
@@ -114,7 +114,7 @@ class DataSet:
         :return:
         """
         rows.sort(key=lambda row: row["Date"])
-        DataSet._fix_dst_duplicates(rows)
+        AqiDataSet._fix_dst_duplicates(rows)
 
         new_rows = []
 
@@ -147,7 +147,7 @@ class DataSet:
         rows = []
 
         for f in csv_files:
-            rows += DataSet._load_csv_skip_header(f)
+            rows += AqiDataSet._load_csv_skip_header(f)
 
         # Filter out the stuff we don't want
         total_count = len(rows)
@@ -157,43 +157,49 @@ class DataSet:
             logging.warning("Removed {0} rows that weren't Beijing / PM2.5".format(total_count - post_filter_count))
 
         # Sort by date and fill in gaps with None
-        return DataSet._sort_and_fill_gaps(rows)
+        return AqiDataSet._sort_and_fill_gaps(rows)
 
     def __init__(self, csvPath):
-        csv_files = DataSet._files_matching(csvPath, "*.csv")
+        csv_files = AqiDataSet._files_matching(csvPath, "*.csv")
         if len(csv_files) == 0:
             raise BaseException("Couldn't find any .csv files in '{0}'".format(csvPath))
 
         logging.info("Preparing to parse %d AQI files" % len(csv_files))
 
-        self.rows = DataSet._read_rows_from_csv_files(csv_files)
+        self.rows = [AqiDataPoint(r['Date'], r['Value']) for r in AqiDataSet._read_rows_from_csv_files(csv_files)]
 
         logging.info("Loaded stateair.net AQI data with {0} rows".format(len(self.rows)))
-        logging.info("    Start: {0}".format(self.rows[0]['Date']))
-        logging.info("    End:   {0}".format(self.rows[len(self.rows) - 1]['Date']))
+        logging.info("    Start: {0}".format(self.rows[0].date))
+        logging.info("    End:   {0}".format(self.rows[len(self.rows) - 1].date))
 
-        self.missing_count = len([r for r in self.rows if r["Value"] is None])
+        self.missing_count = len([r for r in self.rows if r.value is None])
         logging.info("    Missing: {0} ({1}%)".format(self.missing_count, 100 * self.missing_count / len(self.rows)))
+
+
+class AqiDataPoint:
+    def __init__(self, date, value):
+        self.date = date
+        self.value = value
 
 
 class UnitTests(unittest.TestCase):
 
     def test_data_load(self):
 
-        data = DataSet("unittest\\test-data")
+        data = AqiDataSet("unittest\\test-data")
 
 
         self.assertEqual(len(data.rows), 16, "row count")
         self.assertEqual(data.missing_count, 6, "missing_count")
-        self.assertEqual(data.rows[0]['Date'], datetime.datetime(2014, 3, 9, 0), "data[0].date")
-        self.assertEqual(data.rows[-1:][0]['Date'], datetime.datetime(2014, 3, 9, 15), "data[0].date")
+        self.assertEqual(data.rows[0].date, datetime.datetime(2014, 3, 9, 0), "data[0].date")
+        self.assertEqual(data.rows[-1:][0].date, datetime.datetime(2014, 3, 9, 15), "data[0].date")
 
-        self.assertEqual(data.rows[2]['Date'].time().hour, 2, "dst corrected entry's time, in hours")
-        self.assertEqual(data.rows[2]['Value'], 112, "dst corrected entry's PM2.5")
-        self.assertEqual(data.rows[10]['Value'], None, "should be missing due to incorrect city")
-        self.assertEqual(data.rows[11]['Value'], None, "should be missing due to incorrect Parameter")
-        self.assertEqual(data.rows[12]['Value'], None, "should be missing due to incorrect unit")
-        self.assertEqual(data.rows[13]['Value'], None, "should be missing due to incorrect duration")
-        self.assertEqual(data.rows[14]['Value'], None, "should be missing since QC Name = Missing")
+        self.assertEqual(data.rows[2].date.time().hour, 2, "dst corrected entry's time, in hours")
+        self.assertEqual(data.rows[2].value, 112, "dst corrected entry's PM2.5")
+        self.assertEqual(data.rows[10].value, None, "should be missing due to incorrect city")
+        self.assertEqual(data.rows[11].value, None, "should be missing due to incorrect Parameter")
+        self.assertEqual(data.rows[12].value, None, "should be missing due to incorrect unit")
+        self.assertEqual(data.rows[13].value, None, "should be missing due to incorrect duration")
+        self.assertEqual(data.rows[14].value, None, "should be missing since QC Name = Missing")
 
         pass
