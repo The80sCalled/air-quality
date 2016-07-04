@@ -31,4 +31,9 @@ if __name__ == "__main__":
     report = reports.MonthlyAverageReport.process(aqi_data)
     report.write_to_file(config['reports_path'])
 
+    report = reports.SampleDistributionHistogramReport.process(aqi_data)
+    report.write_to_file(config['reports_path'])
+
+    report = reports.HourlyMeanReport.process(aqi_data)
+    report.write_to_file(config['reports_path'])
 

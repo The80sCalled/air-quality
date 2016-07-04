@@ -4,6 +4,7 @@ import osutils
 import csv
 import os
 import logging
+import statistics
 
 class CsvReport:
     def __init__(self, description, fields):
@@ -107,3 +108,62 @@ class MonthlyAverageReport(AqiReportBase):
 
         pass
 
+
+class SampleDistributionHistogramReport(AqiReportBase):
+    """
+    Puts all samples into buckets for histogramming, then transforms it to a dimensionless distribution
+    for use with curve-fitting.
+    """
+
+    @classmethod
+    def process(cls, aqi_data: stateair.AqiDataSet):
+        all_data = aqi_data.data_in_range()
+        MAX_VALUE = 500
+
+        report = CsvReport(
+            "Sample Histogram",
+            ["U", "PU"]
+        )
+
+        samples = [x.value for x in all_data if x.isvalid() and 5 <= x.date.date().month <= 9]
+        bucket_counts = [0 for i in range(0, MAX_VALUE)]
+
+        for sample in samples:
+            int_sample = int(sample)
+            if int_sample < len(bucket_counts):
+                bucket_counts[int_sample] += 1
+
+        overall_mean = statistics.mean(samples)
+        logging.info("Analyzed {0} samples. Mean = {1}, Stdev = {2}".format(len(samples), overall_mean, statistics.stdev(samples, overall_mean) / overall_mean))
+
+        logging.warning("Discarded {0} points because they were outside the bucket range".format(len(all_data) - len(samples)))
+
+        for i in range(0, len(bucket_counts)):
+            report.append_data({'U': i / overall_mean, 'PU': bucket_counts[i] / len(samples) * overall_mean})
+
+        return report
+
+class HourlyMeanReport(AqiReportBase):
+
+    @classmethod
+    def process(cls, aqi_data: stateair.AqiDataSet):
+        all_data = aqi_data.data_in_range()
+
+        report = CsvReport(
+            "Hourly Mean",
+            ["Hour", "Count", "Mean"]
+        )
+
+        samples = [x for x in all_data if x.isvalid()]
+        hour_dict = [{'sum': 0, 'count': 0} for x in range(24)]
+
+        for sample in samples:
+            hour_info = hour_dict[sample.date.time().hour]
+            hour_info['sum'] += sample.value
+            hour_info['count'] += 1
+
+        for hour in range(0, 24):
+            hour_info = hour_dict[hour]
+            report.append_data({'Hour': hour, 'Count': hour_info['count'], 'Mean': hour_info['sum'] / hour_info['count']})
+
+        return report
