@@ -30,6 +30,7 @@ class AqiDataSet:
         """
         import itertools
         import csv
+        import math
 
         skip_lines = 0
         found_header = False
@@ -60,10 +61,11 @@ class AqiDataSet:
 
     @staticmethod
     def _standardize_row_format(row):
+        import math
         row["Date"] = datetime.datetime(int(row["Year"]), int(row["Month"]), int(row["Day"]), int(row["Hour"]))
 
         if row["QC Name"] != "Valid" or float(row["Value"]) < 0:
-            row["Value"] = None
+            row["Value"] = math.nan
         else:
             row["Value"] = float(row["Value"])
 
@@ -114,6 +116,8 @@ class AqiDataSet:
         :param rows:
         :return:
         """
+        import math
+
         rows.sort(key=lambda row: row["Date"])
         AqiDataSet._fix_dst_duplicates(rows)
 
@@ -130,7 +134,7 @@ class AqiDataSet:
                 date_to_add = previous_row['Date'] + datetime.timedelta(hours = 1)
                 while date_to_add < r['Date']:
                     new_row = dict(r) # clone it
-                    new_row["Value"] = None
+                    new_row["Value"] = math.nan
                     new_row["Date"] = date_to_add
                     new_rows.append(new_row)
                     date_to_add += datetime.timedelta(hours = 1)
@@ -157,7 +161,7 @@ class AqiDataSet:
         if (post_filter_count < total_count):
             logging.warning("Removed {0} rows that weren't Beijing / PM2.5".format(total_count - post_filter_count))
 
-        # Sort by date and fill in gaps with None
+        # Sort by date and fill in gaps with invalid entries
         return AqiDataSet._sort_and_fill_gaps(rows)
 
     def __init__(self, csvPath):
@@ -174,13 +178,13 @@ class AqiDataSet:
         logging.info("    Start: {0}".format(self.rows[0].date))
         logging.info("    End:   {0}".format(self.rows[len(self.rows) - 1].date))
 
-        self.missing_count = len([r for r in self.rows if r.value is None])
+        self.missing_count = len([r for r in self.rows if (not r.isvalid())])
         logging.info("    Missing: {0} ({1}%)".format(self.missing_count, 100 * self.missing_count / len(self.rows)))
 
     def data_in_range(self, date_begin=None, date_end=None):
         """
         Given a date range (exclusive), returns all elements with dates greater than or equal to date_begin
-        and less than date_end.
+        and less than date_end.  This function does not copy data, so it executes in O(1) time.
         :param date_begin:
         :param date_end:
         :return:
@@ -217,6 +221,8 @@ class AqiDataRange(collections.Sequence):
     # Optimized for the case where either the same key is being requested, or
     # the next key is being requested
     def __getitem__(self, key):
+        import math
+
         if key < 0:
             key += self._count
 
@@ -226,7 +232,7 @@ class AqiDataRange(collections.Sequence):
         index = key + self.offset_into_data
         if index < 0 or index >= len(self.aqi_data.row_dates):
             my_date = self.date_begin + datetime.timedelta(hours=key)
-            return AqiDataPoint(my_date, None)
+            return AqiDataPoint(my_date, math.nan)
 
         return self.aqi_data.rows[index]
 
@@ -240,12 +246,18 @@ class AqiDataPoint:
         self.value = value
 
     def isvalid(self):
-        return self.value is not None
+        import math
+        try:
+            return not math.isnan(self.value)
+        except TypeError as e:
+            print(self.value)
+            raise Exception("Nope nope nope")
 
 
 class UnitTests(unittest.TestCase):
 
     def test_data_load(self):
+        import math
 
         data = AqiDataSet("unittest\\test-data")
 
@@ -257,11 +269,11 @@ class UnitTests(unittest.TestCase):
 
         self.assertEqual(data.rows[2].date.time().hour, 2, "dst corrected entry's time, in hours")
         self.assertEqual(data.rows[2].value, 112, "dst corrected entry's PM2.5")
-        self.assertEqual(data.rows[10].value, None, "should be missing due to incorrect city")
-        self.assertEqual(data.rows[11].value, None, "should be missing due to incorrect Parameter")
-        self.assertEqual(data.rows[12].value, None, "should be missing due to incorrect unit")
-        self.assertEqual(data.rows[13].value, None, "should be missing due to incorrect duration")
-        self.assertEqual(data.rows[14].value, None, "should be missing since QC Name = Missing")
+        self.assertTrue(math.isnan(data.rows[10].value), "should be missing due to incorrect city")
+        self.assertTrue(math.isnan(data.rows[11].value), "should be missing due to incorrect Parameter")
+        self.assertTrue(math.isnan(data.rows[12].value), "should be missing due to incorrect unit")
+        self.assertTrue(math.isnan(data.rows[13].value), "should be missing due to incorrect duration")
+        self.assertTrue(math.isnan(data.rows[14].value), "should be missing since QC Name = Missing")
 
         pass
 
@@ -293,3 +305,12 @@ class UnitTests(unittest.TestCase):
         self.assertEqual(len(my_range), 16)
         self.assertEqual(my_range[0].date, datetime.datetime(2014, 3, 9, 0), 15)
         self.assertEqual(my_range[15].date, datetime.datetime(2014, 3, 9, 15), 15)
+
+
+    def test_single_data_point(self):
+
+        data = AqiDataSet("unittest\\test-data")
+
+        my_range = data.data_in_range(datetime.datetime(2014, 3, 9, 0), datetime.datetime(2014, 3, 9, 1))
+        self.assertEqual(len(my_range), 1)
+        self.assertEqual(my_range[0].value, 131)

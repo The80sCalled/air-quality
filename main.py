@@ -25,15 +25,17 @@ if __name__ == "__main__":
 
     aqi_data = stateair.AqiDataSet(config['aqi_files_path'])
 
-    report = reports.DataAvailabilityReport.process(aqi_data)
-    report.write_to_file(config['reports_path'])
+    # report = reports.DataAvailabilityReport.process(aqi_data)
+    # report.write_to_file(config['reports_path'])
+    #
+    # report = reports.MonthlyAverageReport.process(aqi_data)
+    # report.write_to_file(config['reports_path'])
+    #
+    # report = reports.SampleDistributionHistogramReport.process(aqi_data)
+    # report.write_to_file(config['reports_path'])
+    #
+    # report = reports.HourlyMeanReport.process(aqi_data)
+    # report.write_to_file(config['reports_path'])
 
-    report = reports.MonthlyAverageReport.process(aqi_data)
+    report = reports.MovingAverageReport.process(aqi_data)
     report.write_to_file(config['reports_path'])
-
-    report = reports.SampleDistributionHistogramReport.process(aqi_data)
-    report.write_to_file(config['reports_path'])
-
-    report = reports.HourlyMeanReport.process(aqi_data)
-    report.write_to_file(config['reports_path'])
-
