@@ -19,7 +19,7 @@ class AqiDataSet:
         full_names = [os.path.join(path, f) for f in os.listdir(path)]
         return [f for f in full_names
                 if os.path.isfile(f) and
-                fnmatch.fnmatch(f, pattern)]
+                fnmatch.fnmatch(os.path.basename(f), pattern)]
 
     @staticmethod
     def _load_csv_skip_header(filename):
@@ -164,10 +164,10 @@ class AqiDataSet:
         # Sort by date and fill in gaps with invalid entries
         return AqiDataSet._sort_and_fill_gaps(rows)
 
-    def __init__(self, csvPath):
-        csv_files = AqiDataSet._files_matching(csvPath, "*.csv")
+    def __init__(self, csvPath, pattern="*.csv"):
+        csv_files = AqiDataSet._files_matching(csvPath, pattern)
         if len(csv_files) == 0:
-            raise BaseException("Couldn't find any .csv files in '{0}'".format(csvPath))
+            raise BaseException("Couldn't find any files in '{0}' matching '{1}'".format(csvPath, pattern))
 
         logging.info("Preparing to parse %d AQI files" % len(csv_files))
 
@@ -241,9 +241,10 @@ class AqiDataRange(collections.Sequence):
 
 
 class AqiDataPoint:
-    def __init__(self, date, value):
+    def __init__(self, date, value, uncertainty=0):
         self.date = date
         self.value = value
+        self.uncertainty = uncertainty
 
     def isvalid(self):
         import math
@@ -259,8 +260,7 @@ class UnitTests(unittest.TestCase):
     def test_data_load(self):
         import math
 
-        data = AqiDataSet("unittest\\test-data")
-
+        data = AqiDataSet("unittest\\test-data", "test.csv")
 
         self.assertEqual(len(data.rows), 16, "row count")
         self.assertEqual(data.missing_count, 6, "missing_count")
@@ -278,7 +278,7 @@ class UnitTests(unittest.TestCase):
         pass
 
     def test_data_in_range(self):
-        data = AqiDataSet("unittest\\test-data")
+        data = AqiDataSet("unittest\\test-data", "test.csv")
 
         my_range = data.data_in_range(datetime.date(2014, 2, 1), datetime.date(2014, 2, 4))
         self.assertEqual(len(my_range), 72, "empty set")
@@ -309,7 +309,7 @@ class UnitTests(unittest.TestCase):
 
     def test_single_data_point(self):
 
-        data = AqiDataSet("unittest\\test-data")
+        data = AqiDataSet("unittest\\test-data", "test.csv")
 
         my_range = data.data_in_range(datetime.datetime(2014, 3, 9, 0), datetime.datetime(2014, 3, 9, 1))
         self.assertEqual(len(my_range), 1)

@@ -7,10 +7,11 @@ def InitTest():
     return _init_internal("test/config.json")
 
 def Init(argv):
-    if len(argv) == 1:
+    basic_argv = [x for x in argv if not x.startswith('--')]
+    if len(basic_argv) == 1:
         config_path = "./config.json"
-    elif len(argv) == 2:
-        config_path = os.path.expanduser(argv[1])
+    elif len(basic_argv) == 2:
+        config_path = os.path.expanduser(basic_argv[1])
     else:
         raise Exception("Wrong number of arguments.  Syntax: main.py [<config-json-path>]")
 
