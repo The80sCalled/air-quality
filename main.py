@@ -21,21 +21,30 @@ if __name__ == "__main__":
     config = base.Init(sys.argv)
     _prepare_config(config)
 
-    logging.info("Reading AQI files from %s" % config['aqi_files_path'])
+    mode = 'train'
 
-    aqi_data = stateair.AqiDataSet(config['aqi_files_path'])
+    if mode == 'train':
+        logging.info("Reading AQI files from %s" % config['aqi_files_path'])
+        aqi_data = stateair.AqiDataSet(config['aqi_files_path'])
 
-    # report = reports.DataAvailabilityReport.process(aqi_data)
-    # report.write_to_file(config['reports_path'])
-    #
-    # report = reports.MonthlyAverageReport.process(aqi_data)
-    # report.write_to_file(config['reports_path'])
-    #
-    # report = reports.SampleDistributionHistogramReport.process(aqi_data)
-    # report.write_to_file(config['reports_path'])
-    #
-    # report = reports.HourlyMeanReport.process(aqi_data)
-    # report.write_to_file(config['reports_path'])
+        
 
-    report = reports.MovingAverageReport.process(aqi_data)
-    report.write_to_file(config['reports_path'])
+
+    elif mode == 'reports':
+        logging.info("Reading AQI files from %s" % config['aqi_files_path'])
+        aqi_data = stateair.AqiDataSet(config['aqi_files_path'])
+
+        # report = reports.DataAvailabilityReport.process(aqi_data)
+        # report.write_to_file(config['reports_path'])
+        #
+        # report = reports.MonthlyAverageReport.process(aqi_data)
+        # report.write_to_file(config['reports_path'])
+        #
+        # report = reports.SampleDistributionHistogramReport.process(aqi_data)
+        # report.write_to_file(config['reports_path'])
+        #
+        # report = reports.HourlyMeanReport.process(aqi_data)
+        # report.write_to_file(config['reports_path'])
+
+        report = reports.MovingAverageReport.process(aqi_data)
+        report.write_to_file(config['reports_path'])
