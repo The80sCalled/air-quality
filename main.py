@@ -59,14 +59,14 @@ def _do_reports(config):
     report = reports.DataAvailabilityReport.process(aqi_data)
     report.write_to_file(config['reports_path'])
 
-    # report = reports.MonthlyAverageReport.process(aqi_data)
-    # report.write_to_file(config['reports_path'])
-    #
-    # report = reports.SampleDistributionHistogramReport.process(aqi_data)
-    # report.write_to_file(config['reports_path'])
-    #
-    # report = reports.HourlyMeanReport.process(aqi_data)
-    # report.write_to_file(config['reports_path'])
+    report = reports.MonthlyAverageReport.process(aqi_data)
+    report.write_to_file(config['reports_path'])
+
+    report = reports.SampleDistributionHistogramReport.process(aqi_data)
+    report.write_to_file(config['reports_path'])
+
+    report = reports.HourlyMeanReport.process(aqi_data)
+    report.write_to_file(config['reports_path'])
 
     report = reports.MovingAverageReport.process(aqi_data)
     report.write_to_file(config['reports_path'])

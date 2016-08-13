@@ -87,6 +87,7 @@ class MovingAverageReport(AqiReportBase):
 
     @classmethod
     def process(cls, aqi_data: stateair.AqiDataSet):
+        import math
         all_data = aqi_data.data_in_range()
 
         year = 2015
@@ -110,7 +111,7 @@ class MovingAverageReport(AqiReportBase):
 
         report = CsvReport(
             "Moving average and N stdev: {0}".format(year),
-            ['day'] + [str(year), str(year) + '-raw'])
+            ['day'] + [str(year), str(year) + '-dx', str(year) + '-raw'])
 
         for day in range(0, domain_total_days):
             new_row = { 'day': day }
@@ -118,8 +119,12 @@ class MovingAverageReport(AqiReportBase):
 
             window_data = aqi_data.data_in_range(center_datetime - window_begin_offset, center_datetime + window_end_offset)
             avg = sum([window_data[x].value * kernel_func[x] for x in range(0, window_size_in_samples)])
+            # Standard uncertainty propagation
+            dx = math.sqrt(sum([y * y for y in
+                                [abs(kernel_func[x]) * window_data[x].uncertainty for x in range(0, window_size_in_samples)]]))
 
             new_row[str(year)] = avg
+            new_row[str(year) + '-dx'] = dx
             new_row[str(year) + '-raw'] = window_data[window_half_size_in_samples].value
 
             report.append_data(new_row)

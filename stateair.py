@@ -242,9 +242,13 @@ class AqiDataRange(collections.Sequence):
 
 class AqiDataPoint:
     def __init__(self, date, value, uncertainty=0):
+        import math
         self.date = date
         self.value = value
-        self.uncertainty = uncertainty
+        if math.isnan(self.value):
+            self.uncertainty = math.nan
+        else:
+            self.uncertainty = 0
 
     def isvalid(self):
         import math
@@ -270,6 +274,7 @@ class UnitTests(unittest.TestCase):
         self.assertEqual(data.rows[2].date.time().hour, 2, "dst corrected entry's time, in hours")
         self.assertEqual(data.rows[2].value, 112, "dst corrected entry's PM2.5")
         self.assertTrue(math.isnan(data.rows[10].value), "should be missing due to incorrect city")
+        self.assertTrue(math.isnan(data.rows[10].uncertainty), "uncertainty should be NaN for missing data")
         self.assertTrue(math.isnan(data.rows[11].value), "should be missing due to incorrect Parameter")
         self.assertTrue(math.isnan(data.rows[12].value), "should be missing due to incorrect unit")
         self.assertTrue(math.isnan(data.rows[13].value), "should be missing due to incorrect duration")
