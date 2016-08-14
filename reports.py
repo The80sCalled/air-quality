@@ -90,7 +90,7 @@ class MovingAverageReport(AqiReportBase):
         import math
         all_data = aqi_data.data_in_range()
 
-        year = 2015
+        year = 2013
         window_size = datetime.timedelta(days=15)
 
         # Ensure the filter window is symmetric about the center point.  Since it's reasonable to expect that a moing box
